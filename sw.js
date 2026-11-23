@@ -1,4 +1,4 @@
-const C='jy-v1',F=['./','index.html','manifest.json','icon.svg'];
+const C='jy-v2',F=['./','index.html','manifest.json','icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(F)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!='GET')return;
