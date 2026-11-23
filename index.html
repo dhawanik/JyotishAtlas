@@ -1,0 +1,360 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0e1c"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><title>Jyotish Atlas</title><style>
+:root{--bg:#0a0e1c;--c:#121933;--t:#e8ecff;--m:#8e99c8;--a:#f5c45e;--l:#222c55}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:var(--bg);color:var(--t);font:15px/1.4 system-ui,sans-serif;padding-bottom:76px}
+header{position:sticky;top:0;z-index:5;background:#0a0e1cf2;padding:10px 12px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--l)}header b{font-size:16px}
+main{padding:10px;max-width:640px;margin:auto}.card{background:var(--c);border:1px solid var(--l);border-radius:14px;padding:12px;margin-bottom:10px}.m{color:var(--m);font-size:12.5px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0d1330;border-top:1px solid var(--l);padding-bottom:env(safe-area-inset-bottom)}nav b{flex:1;text-align:center;padding:6px 0;font-size:10px;color:var(--m)}nav b i{display:block;font-size:19px;font-style:normal}nav b.on{color:var(--a)}
+button,.btn,select,input,textarea{background:#1a2347;color:var(--t);border:1px solid #2c3870;border-radius:9px;padding:8px 10px;font:inherit;max-width:100%}button.pri{background:var(--a);color:#14110a;border:0;font-weight:600}button{cursor:pointer}textarea{flex:1;min-width:0}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}.row>label{flex:1;min-width:120px}label{display:block;font-size:12.5px;color:var(--m);margin:6px 0}label input,label select{width:100%;margin-top:3px}
+.seg{display:flex;background:#0d1330;border-radius:10px;padding:3px;margin:4px 0}.seg b{flex:1;text-align:center;padding:7px 2px;border-radius:8px;font-size:13px;color:var(--m)}.seg b.on{background:#27336b;color:var(--t)}
+.chip{display:inline-block;border:1px solid #3a4580;border-radius:20px;padding:4px 10px;font-size:12.5px;color:var(--m);cursor:pointer}.chip.on{background:#27336b;color:var(--t)}
+svg.ch{width:100%;height:auto;display:block;margin:6px 0;max-height:70vh}.hp{fill:none;stroke:#4a5aa8;stroke-width:1.2}.hl{stroke:#4a5aa8;stroke-width:1}.hl.as{stroke:var(--a);stroke-width:2}
+.sn{fill:#6f7bb0;font-size:11px;text-anchor:middle}.pt{font-size:13px;text-anchor:middle;font-weight:600;cursor:pointer}.wt{text-anchor:middle;fill:#c9d2ff;font-size:11px}.wt.big{font-size:13px;font-weight:600}.wt.sm{font-size:8.5px;fill:#8e99c8}.wt.hn{font-size:10px;fill:#6f7bb0}.pt2{font-size:13px;font-weight:700;cursor:pointer}
+.e0{fill:#3a2030;stroke:#4a5aa8}.e1{fill:#24301f;stroke:#4a5aa8}.e2{fill:#1c2f45;stroke:#4a5aa8}.e3{fill:#1f2757;stroke:#4a5aa8}.nk0{fill:#121933;stroke:#2c3870}.nk1{fill:#18214a;stroke:#2c3870}
+.tb{width:100%;border-collapse:collapse;font-size:13px}.tb th{text-align:left;color:var(--m);font-weight:500}.tb td,.tb th{padding:5px 3px;border-bottom:1px solid #1d2650}.tb tr[data-a]{cursor:pointer}
+.dr{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid #1d2650;font-size:13.5px;cursor:pointer}.dr span{color:var(--m);font-size:12px}.dr.now{background:#27336b55;border-left:3px solid var(--a)}
+.bar{display:flex;align-items:center;gap:6px;font-size:12.5px;margin:3px 0}.bar span{width:60px;color:var(--m)}.bar i{display:block;height:10px;border-radius:5px}.bar em{font-style:normal}.leg{display:flex;gap:10px;flex-wrap:wrap;font-size:12px}
+.msg{padding:9px 11px;border-radius:12px;margin:6px 0;max-width:92%;font-size:14px}.msg.user{background:#27336b;margin-left:auto}.msg.assistant{background:var(--c);border:1px solid var(--l)}
+.ov{position:fixed;inset:0;background:#000a;z-index:20;display:flex;align-items:flex-end}.sh{background:#0f1636;width:100%;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px;max-width:640px;margin:auto}.li{padding:8px 0;border-bottom:1px solid #1d2650}.li input{width:100%;margin:3px 0}
+details{border-bottom:1px solid #1d2650;padding:6px 0}summary{font-weight:600;cursor:pointer;padding:6px 0}h2,h3,h4{margin:6px 0}
+</style></head><body><div id="app"></div><script>
+'use strict';
+/* Jyotish engine: on-device ephemeris (Standish/JPL elements + Meeus Moon), True-Chitra (Spica) ayanamsa, houses, dashas, vargas */
+const D2R=Math.PI/180,R2D=180/Math.PI,mod=(x,m=360)=>((x%m)+m)%m,J2000=2451545,YR=365.25;
+const sd=x=>Math.sin(x*D2R),cd=x=>Math.cos(x*D2R),sph=(lo,la,r)=>[r*cd(la)*cd(lo),r*cd(la)*sd(lo),r*sd(la)];
+const jdOf=ms=>ms/864e5+2440587.5,msOf=jd=>(jd-2440587.5)*864e5;
+const dTs=y=>{let t;if(y>=2005){t=y-2000;return 62.92+.32217*t+.005589*t*t}
+if(y>=1986){t=y-2000;return 63.86+.3345*t-.060374*t*t+.0017275*t**3+.000651814*t**4+.00002373599*t**5}
+if(y>=1961){t=y-1975;return 45.45+1.067*t-t*t/260-t**3/718}
+if(y>=1941){t=y-1950;return 29.07+.407*t-t*t/233+t**3/2547}
+if(y>=1920){t=y-1920;return 21.2+.84493*t-.0761*t*t+.0020936*t**3}
+if(y>=1900){t=y-1900;return -2.79+1.494119*t-.0598939*t*t+.0061966*t**3-.000197*t**4}
+t=(y-1820)/100;return -20+32*t*t};
+const Tc=jd=>(jd+dTs(2000+(jd-J2000)/365.25)/864e5-J2000)/36525;
+const pA=T=>(5028.796195*T+1.1054348*T*T)/3600;
+const EL={me:[.38709927,3.7e-7,.20563593,1.906e-5,7.00497902,-.00594749,252.2503235,149472.67411175,77.45779628,.16047689,48.33076593,-.12534081],
+ve:[.72333566,3.9e-6,.00677672,-4.107e-5,3.39467605,-.0007889,181.9790995,58517.81538729,131.60246718,.00268329,76.67984255,-.27769418],
+ea:[1.00000261,5.62e-6,.01671123,-4.392e-5,-1.531e-5,-.01294668,100.46457166,35999.37244981,102.93768193,.32327364,0,0],
+ma:[1.52371034,1.847e-5,.0933941,7.882e-5,1.84969142,-.00813131,-4.55343205,19140.30268499,-23.94362959,.44441088,49.55953891,-.29257343],
+ju:[5.202887,-1.1607e-4,.04838624,-1.3253e-4,1.30439695,-.00183714,34.39644051,3034.74612775,14.72847983,.21252668,100.47390909,.20469106],
+sa:[9.53667594,-.0012506,.05386179,-5.0991e-4,2.48599187,.00193609,49.95424423,1222.49362201,92.59887831,-.41897216,113.66242448,-.28867794]};
+function helio(k,T){const e=EL[k],a=e[0]+e[1]*T,ec=e[2]+e[3]*T,I=(e[4]+e[5]*T)*D2R,L=e[6]+e[7]*T,w=e[8]+e[9]*T,O=(e[10]+e[11]*T)*D2R;
+const M=mod(L-w)*D2R;let E=M+ec*Math.sin(M);for(let i=0;i<9;i++)E+=(M-E+ec*Math.sin(E))/(1-ec*Math.cos(E));
+const xp=a*(Math.cos(E)-ec),yp=a*Math.sqrt(1-ec*ec)*Math.sin(E),om=w*D2R-O,co=Math.cos(om),so=Math.sin(om),cO=Math.cos(O),sO=Math.sin(O),cI=Math.cos(I),sI=Math.sin(I);
+return[(co*cO-so*sO*cI)*xp+(-so*cO-co*sO*cI)*yp,(co*sO+so*cO*cI)*xp+(-so*sO+co*cO*cI)*yp,so*sI*xp+co*sI*yp,Math.hypot(xp,yp),a]}
+const MT=[[0,0,1,0,6288774],[2,0,-1,0,1274027],[2,0,0,0,658314],[0,0,2,0,213618],[0,1,0,0,-185116],[0,0,0,2,-114332],[2,0,-2,0,58793],[2,-1,-1,0,57066],[2,0,1,0,53322],[2,-1,0,0,45758],[0,1,-1,0,-40923],[1,0,0,0,-34720],[0,1,1,0,-30383],[2,0,0,-2,15327],[0,0,1,2,-12528],[0,0,1,-2,10980],[4,0,-1,0,10675],[0,0,3,0,10034],[4,0,-2,0,8548],[2,1,-1,0,-7888],[2,1,0,0,-6766],[1,0,-1,0,-5163],[1,1,0,0,4987],[2,-1,1,0,4036],[2,0,2,0,3994],[4,0,0,0,3861],[2,0,-3,0,3665],[0,1,-2,0,-2689],[2,0,-1,2,-2602],[2,-1,-2,0,2390],[1,0,1,0,-2348],[2,-2,0,0,2236],[0,1,2,0,-2120],[0,2,0,0,-2069],[2,-2,-1,0,2048],[2,0,1,-2,-1773],[2,0,0,2,-1595],[4,-1,-1,0,1215],[0,0,2,2,-1110]];
+const MB=[[0,0,0,1,5128122],[0,0,1,1,280602],[0,0,1,-1,277693],[2,0,0,-1,173237],[2,0,-1,1,55413],[2,0,-1,-1,46271],[2,0,0,1,32573],[0,0,2,1,17198],[2,0,1,-1,9266],[0,0,2,-1,8822],[2,-1,0,-1,8216],[2,0,-2,-1,4324],[2,0,1,1,4200],[2,1,0,-1,-3359]];
+function moon(T){const L=mod(218.3164477+481267.88123421*T-.0015786*T*T),D=mod(297.8501921+445267.1114034*T-.0018819*T*T),M=mod(357.5291092+35999.0502909*T-.0001536*T*T),Mp=mod(134.9633964+477198.8675055*T+.0087414*T*T),F=mod(93.272095+483202.0175233*T-.0036539*T*T),E=1-.002516*T-7.4e-6*T*T;
+let sl=0,sb=0;for(const[d,m,mp,f,c]of MT)sl+=c*E**Math.abs(m)*sd(d*D+m*M+mp*Mp+f*F);for(const[d,m,mp,f,c]of MB)sb+=c*E**Math.abs(m)*sd(d*D+m*M+mp*Mp+f*F);
+const A1=119.75+131.849*T,A2=53.09+479264.29*T,A3=313.45+481266.484*T;
+sl+=3958*sd(A1)+1962*sd(L-F)+318*sd(A2);sb+=-2235*sd(L)+382*sd(A3)+175*sd(A1-F)+175*sd(A1+F)+127*sd(L-Mp)-115*sd(L+Mp);
+return{lon:mod(L+sl/1e6),lat:sb/1e6,r:(385001-20905*cd(Mp)-3699*cd(2*D-Mp)-2956*cd(2*D))/149597870.7}}
+function earth(T){const e=helio('ea',T),m=moon(T),v=sph(m.lon-pA(T),m.lat,m.r);return[e[0]-v[0]/82.30056,e[1]-v[1]/82.30056,e[2]-v[2]/82.30056]}
+function geo(k,T){const e=earth(T);let x,y,z;if(k=='su'){x=-e[0];y=-e[1];z=-e[2]}else{let p=helio(k,T);const d=Math.hypot(p[0]-e[0],p[1]-e[1],p[2]-e[2]);p=helio(k,T-d*.0057755183/36525);x=p[0]-e[0];y=p[1]-e[1];z=p[2]-e[2]}
+const r=Math.hypot(x,y,z);let lon=mod(Math.atan2(y,x)*R2D)+pA(T);if(k=='su')lon-=.0056916/r;return{lon:mod(lon),lat:Math.asin(z/r)*R2D,r}}
+const KEY=['su','mo','ma','me','ju','ve','sa'];
+function node(T,tru){let O=mod(125.0445479-1934.1362891*T+.0020754*T*T);if(tru){const D=297.8501921+445267.1114034*T,M=357.5291092+35999.0502909*T,Mp=134.9633964+477198.8675055*T,F=93.272095+483202.0175233*T;O+=-1.4979*sd(2*(D-F))-.15*sd(M)-.1226*sd(2*D)+.1176*sd(2*F)-.0801*sd(2*(Mp-F))}return mod(O)}
+function pos(i,T,tru){if(i==1){const m=moon(T);return{lon:m.lon,lat:m.lat,r:m.r}}if(i<7)return geo(KEY[i],T);const n=node(T,tru);return{lon:i==7?n:mod(n+180),lat:0,r:0}}
+function speed(i,T,tru){const h=.1/36525,a=pos(i,T-h,tru).lon,b=pos(i,T+h,tru).lon;return((b-a+540)%360-180)/.2}
+/* Ayanamsa: True Chitra = Spica (proper motion + precession) held at exactly 180 deg sidereal */
+const eps=T=>23.4392911-.0130042*T-1.64e-7*T*T+5.036e-7*T**3;
+function spica(T){const y=T*100,dec=(-11.16132+(-30.67/3.6e6)*y)*D2R,ra=(201.29824+(-42.35/3.6e6)/Math.cos(dec)*y)*D2R,e=23.4392911*D2R;
+return mod(Math.atan2(Math.sin(ra)*Math.cos(e)+Math.tan(dec)*Math.sin(e),Math.cos(ra))*R2D+pA(T))}
+const AYN={tc:'True Chitra (Spica = 0° Libra)',lah:'Lahiri (Chitrapaksha)',kp:'Krishnamurti (KP)',ram:'B.V. Raman',fb:'Fagan-Bradley',tr:'Tropical (none)'};
+const AYB={lah:23.857092,kp:23.76,ram:22.37,fb:24.74,tr:-1e9};
+const ayanamsa=(id,T)=>id=='tc'?spica(T)-180:id=='tr'?0:AYB[id]+pA(T);
+/* Houses */
+const gmst=jd=>{const T=(jd-J2000)/36525;return mod(280.46061837+360.98564736629*(jd-J2000)+.000387933*T*T-T**3/38710000)};
+const lonRA=(ra,e)=>mod(Math.atan2(Math.sin(ra*D2R),Math.cos(ra*D2R)*Math.cos(e))*R2D);
+function hCusps(hs,ramc,lat,eD,ay){const e=eD*D2R,r=ramc*D2R,ph=lat*D2R;
+const mcT=lonRA(ramc,e),ascT=mod(Math.atan2(Math.cos(r),-(Math.sin(r)*Math.cos(e)+Math.tan(ph)*Math.sin(e)))*R2D);
+const asc=mod(ascT-ay),mc=mod(mcT-ay);let c,fb=0;
+const por=()=>{const ic=mod(mc+180),ds=mod(asc+180),o=[];const tri=(a,b,out)=>{const s=mod(b-a);out.push(mod(a+s/3),mod(a+2*s/3))};const q=[];tri(asc,ic,q);tri(ic,ds,q);tri(ds,mc,q);tri(mc,asc,q);
+return[asc,q[0],q[1],ic,q[2],q[3],ds,q[4],q[5],mc,q[6],q[7]]};
+if(hs=='W'){const s=Math.floor(asc/30)*30;c=Array.from({length:12},(_,i)=>mod(s+30*i))}
+else if(hs=='E')c=Array.from({length:12},(_,i)=>mod(asc+30*i));
+else if(hs=='P'&&Math.abs(lat)<90-eD-.05){const pl=h=>{let ra=h==11?ramc+30:h==12?ramc+60:h==2?ramc+120:ramc+150;
+for(let i=0;i<40;i++){const lam=Math.atan2(Math.sin(ra*D2R),Math.cos(ra*D2R)*Math.cos(e)),dec=Math.asin(Math.sin(e)*Math.sin(lam)),dsa=Math.acos(Math.max(-1,Math.min(1,-Math.tan(ph)*Math.tan(dec))))*R2D,nsa=180-dsa;
+const n=h==11?ramc+dsa/3:h==12?ramc+2*dsa/3:h==2?ramc+180-2*nsa/3:ramc+180-nsa/3;if(Math.abs(n-ra)<1e-9){ra=n;break}ra=n}return lonRA(ra,e)};
+const c11=pl(11),c12=pl(12),c2=pl(2),c3=pl(3);c=[ascT,c2,c3,mod(mcT+180),c11+180,c12+180,ascT+180,c2+180,c3+180,mcT,c11,c12].map(x=>mod(x-ay))}
+else{if(hs=='P')fb=1;const p=por();if(hs=='S'){c=p.map((x,i)=>{const a=p[(i+11)%12],d=mod(x-a);return mod(a+d/2)})}else c=p}
+return{c,asc,mc,fb,mad:hs=='S'?por():null}}
+const findH=(l,c)=>{for(let i=0;i<12;i++)if(mod(l-c[i])<mod(c[(i+1)%12]-c[i]))return i+1;return 1};
+/* Names & tables */
+const SIGNS=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'],SG=['Ar','Ta','Ge','Cn','Le','Vi','Li','Sc','Sg','Cp','Aq','Pi'];
+const PN=['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'],PS=['Su','Mo','Ma','Me','Ju','Ve','Sa','Ra','Ke'];
+const NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','P.Phalguni','U.Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','P.Ashadha','U.Ashadha','Shravana','Dhanishta','Shatabhisha','P.Bhadrapada','U.Bhadrapada','Revati'];
+const SL=[2,5,3,1,0,3,5,2,4,6,6,4];
+const EX=[[0,10],[1,3],[9,28],[5,15],[3,5],[11,27],[6,20]],OWN=[[4],[3],[0,7],[2,5],[8,11],[1,6],[9,10]],MTR=[[4,0,20],[1,3,30],[0,0,12],[5,15,20],[8,0,10],[6,0,15],[10,0,20]],FR=[[1,2,4],[0,3],[0,1,4],[0,5],[0,1,2],[3,6],[3,5]],EN=[[5,6],[],[3],[1],[3,5],[0,1],[0,1,2]];
+function dignity(i,sg,dg,P){if(i>6)return'';if(EX[i][0]==sg)return'Exalted';if((EX[i][0]+6)%12==sg)return'Debilitated';const m=MTR[i];if(m[0]==sg&&dg>=m[1]&&dg<m[2])return'Moolatrikona';if(OWN[i].includes(sg))return'Own sign';
+const L=SL[sg],nat=FR[i].includes(L)?1:EN[i].includes(L)?-1:0,d=(P[L].sg-P[i].sg+12)%12+1,s=nat+([2,3,4,10,11,12].includes(d)?1:-1);return['Great enemy','Enemy','Neutral','Friend','Great friend'][s+2]}
+const angd=(a,b)=>{const d=mod(a-b);return d>180?360-d:d},CB=[0,12,17,14,11,10,15];
+function compute(p){const T=Tc(p.jd),ay=ayanamsa(p.ay,T),tru=p.nd!='mean',pl=[];
+for(let i=0;i<9;i++){const q=pos(i,T,tru),sp=speed(i,T,tru),lon=mod(q.lon-ay),sg=Math.floor(lon/30);pl.push({i,trop:q.lon,lat:q.lat,r:q.r,lon,sp,rx:i>6||(i>1&&sp<0),sg,dg:lon-sg*30,nk:Math.floor(lon/(360/27)),pd:Math.floor(lon%(360/27)/(360/108))+1})}
+const eD=eps(T),H=hCusps(p.hs,mod(gmst(p.jd)+p.lon),p.lat,eD,ay),lag=Math.floor(H.asc/30);
+for(const q of pl){q.house=findH(q.lon,H.c);q.dig=dignity(q.i,q.sg,q.dg,pl);q.cb=q.i>1&&q.i<7&&angd(q.lon,pl[0].lon)<(q.i==3&&q.rx?12:q.i==5&&q.rx?8:CB[q.i])}
+return{jd:p.jd,T,ay,ayId:p.ay,hs:p.hs,pl,c:H.c,asc:H.asc,mc:H.mc,fb:H.fb,lag,eD}}
+function overlay(n,p,jd){const o=compute({...p,jd});for(const q of o.pl)q.house=findH(q.lon,n.c);o.c=n.c;o.asc=n.asc;o.mc=n.mc;o.lag=n.lag;o.base=1;return o}
+/* Vargas (Parashari) */
+const VN={1:'Rashi',2:'Hora',3:'Drekkana',4:'Chaturthamsa',7:'Saptamsa',9:'Navamsa',10:'Dasamsa',12:'Dwadasamsa',16:'Shodasamsa',20:'Vimsamsa',24:'Siddhamsa',27:'Bhamsa',30:'Trimsamsa',40:'Khavedamsa',45:'Akshavedamsa',60:'Shashtyamsa'};
+function dsign(lon,n){const s=Math.floor(lon/30),d=lon-s*30,odd=s%2==0,mv=s%3;if(n==1)return s;
+if(n==2)return odd==(d<15)?4:3;
+if(n==30){const t=odd?[[5,0],[10,10],[18,8],[25,2],[30,6]]:[[5,1],[12,5],[20,11],[25,9],[30,7]];return t.find(x=>d<x[0])[1]}
+const k=Math.min(n-1,Math.floor(d/(30/n)));let st=s;
+if(n==3)return(s+4*k)%12;if(n==4)return(s+3*k)%12;
+if(n==7)st=odd?s:s+6;else if(n==9)st=s+[0,8,4][mv];else if(n==10)st=odd?s:s+8;else if(n==16||n==45)st=[0,4,8][mv];else if(n==20)st=[0,8,4][mv];else if(n==24)st=odd?4:3;else if(n==27)st=[0,3,6,9][s%4];else if(n==40)st=odd?0:6;
+return(st+k)%12}
+/* Dashas */
+const DS={vim:{o:[8,5,0,1,2,7,4,6,3],y:[7,20,6,10,7,18,16,19,17],n:'Vimshottari (120y)'},yog:{o:[1,0,4,2,3,6,5,7],y:[1,2,3,4,5,6,7,8],n:'Yogini (36y)'}};
+function dashaStart(sys,moon,jd){const d=DS[sys],nk=moon/(360/27),n=Math.floor(nk),fr=nk-n,i0=sys=='vim'?n%9:(((n+1+3)%8)||8)-1;return{i0,st:jd-fr*d.y[i0]*YR}}
+const mahas=(sys,i0,st)=>{const d=DS[sys],n=d.o.length;let t=st;return Array.from({length:n+1},(_,j)=>{const k=(i0+j)%n,l=d.y[k]*YR,r={k,l:d.o[k],s:t,e:t+l};t+=l;return r})};
+const subs=(sys,p)=>{const d=DS[sys],n=d.o.length,tot=d.y.reduce((a,b)=>a+b),len=p.e-p.s;let t=p.s;return Array.from({length:n},(_,j)=>{const k=(p.k+j)%n,l=len*d.y[k]/tot,r={k,l:d.o[k],s:t,e:t+l};t+=l;return r})};
+/* Panchanga */
+const TITHI=['Pratipada','Dwitiya','Tritiya','Chaturthi','Panchami','Shashthi','Saptami','Ashtami','Navami','Dashami','Ekadashi','Dwadashi','Trayodashi','Chaturdashi'],YOGA=['Vishkumbha','Priti','Ayushman','Saubhagya','Shobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghata','Harshana','Vajra','Siddhi','Vyatipata','Variyana','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'],KAR=['Bava','Balava','Kaulava','Taitila','Gara','Vanija','Vishti'],VARA=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function panchanga(ch,wd){const s=ch.pl[0].lon,m=ch.pl[1].lon,d=mod(m-s),t=Math.floor(d/12),k=Math.floor(d/6);
+return{tithi:(t<29?(t%15<14?TITHI[t%15]:t<15?'Purnima':'Amavasya'):'Amavasya')+(t<15?' (Shukla)':' (Krishna)'),n:t+1,yoga:YOGA[Math.floor(mod(s+m)/(360/27))],karana:k==0?'Kimstughna':k<57?KAR[(k-1)%7]:['Shakuni','Chatushpada','Naga'][k-57],vara:VARA[wd],nak:NAK[ch.pl[1].nk],pd:ch.pl[1].pd}}
+/* Solar system snapshot (heliocentric, zodiac-aligned) */
+function helioSnap(jd,ayId){const T=Tc(jd),h=.5/36525,rot=(pA(T)-ayanamsa(ayId,T))*D2R,R=(x,y)=>[x*Math.cos(rot)-y*Math.sin(rot),x*Math.sin(rot)+y*Math.cos(rot)];
+return['me','ve','ea','ma','ju','sa'].map(k=>{const p=helio(k,T),a=helio(k,T-h),b=helio(k,T+h),[x,y]=R(p[0],p[1]),[vx,vy]=R(b[0]-a[0],b[1]-a[1]);
+return{k,x,y,r:p[3],vx,vy,spd:29.7847*Math.sqrt(Math.max(0,2/p[3]-1/p[4])),lon:mod(Math.atan2(y,x)*R2D)}})}
+const eqOf=(lon,lat,eD)=>{const e=eD*D2R,l=lon*D2R,b=lat*D2R;return{ra:mod(Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(b)*Math.sin(e),Math.cos(l))*R2D),dec:Math.asin(Math.sin(b)*Math.cos(e)+Math.cos(b)*Math.sin(e)*Math.sin(l))*R2D}};
+/* Time zones */
+function tzOff(tz,ms){const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}).formatToParts(new Date(ms)).map(x=>[x.type,+x.value]));
+return(Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)-Math.floor(ms/1000)*1000)/6e4}
+function tzFix(tz,ms){const m=/^([+-])(\d+):?(\d*)/.exec(tz);return m?(m[1]=='-'?-1:1)*(+m[2]*60+(+m[3]||0)):tzOff(tz,ms)}
+function local2ms(y,mo,d,h,mi,tz){const b=Date.UTC(y,mo-1,d,h,mi);let ms=b;for(let i=0;i<3;i++)ms=b-tzFix(tz,ms)*6e4;return ms}
+if(typeof module!='undefined')module.exports={compute,overlay,ayanamsa,spica,dsign,dashaStart,mahas,subs,hCusps,helioSnap,local2ms,tzFix,jdOf,msOf,mod,J2000,Tc,YR,gmst,eps,eqOf,findH,panchanga,DS};
+'use strict';
+const $=s=>document.querySelector(s),iso=d=>new Date(d).toISOString().slice(0,10),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LSK='jyatlas2',HSN={P:'Placidus',W:'Whole Sign',E:'Equal',O:'Porphyry',S:'Sripati'},PC=['#ffb347','#d8e0ff','#ff6b6b','#5eead4','#ffd84d','#ff8fd0','#9fb3ff','#b69cff','#b69cff'];
+const NAB=['Ashw','Bhar','Krit','Rohi','Mrig','Ardr','Puna','Push','Ashl','Magh','PPha','UPha','Hast','Chit','Swat','Vish','Anur','Jyes','Mula','PAsh','UAsh','Shra','Dhan','Shat','PBha','UBha','Reva'];
+let S={charts:[],cur:null,cfg:{ay:'tc',hs:'P',nd:'true',st:'north',dv:1,pm:'house'},prov:[],mcp:[],act:0,chat:{},tok:[0,0]};
+try{Object.assign(S,JSON.parse(localStorage.getItem(LSK)||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem(LSK,JSON.stringify(S))}catch(e){}};
+let tab='chart',view={m:'birth',d:iso(Date.now()),y:new Date().getFullYear()},ui={dsys:'vim',open:{},sheet:'',sky:null,mp:{sel:[0,1,2,3,4,5,6],ph:null},busy:0,draft:'',places:[]};
+const cur=()=>S.charts.find(c=>c.id==S.cur)||S.charts[0],nowJD=()=>jdOf(Date.now()),ds=jd=>new Date(msOf(jd)).toISOString().slice(0,10);
+const fD=d=>`${Math.floor(d)}°${String(Math.floor(d%1*60)).padStart(2,'0')}′`,fP=l=>fD(l%30)+' '+SG[Math.floor(l/30)];
+const fL=(ms,tz)=>new Date(ms+tzFix(tz,ms)*6e4).toISOString().slice(0,16).replace('T',' ');
+let CK='',CV=null;const prm=c=>({jd:c.jd,lat:c.lat,lon:c.lon,ay:S.cfg.ay,hs:S.cfg.hs,nd:S.cfg.nd});
+const natal=c=>{const k=JSON.stringify(prm(c));if(k!=CK){CK=k;CV=compute(prm(c))}return CV};
+function solarReturn(c,n,y){let jd=n.jd+(y-Math.floor(2000+(n.jd-J2000)/365.2422))*365.2422;for(let i=0;i<8;i++){const s=compute({...prm(c),jd}).pl[0].lon;jd+=((n.pl[0].lon-s+540)%360-180)/.9856}return jd}
+function viewCh(c){const n=natal(c),m=view.m,T=()=>view.d==iso(Date.now())?Date.now():Date.parse(view.d+'T12:00:00Z');
+if(m=='transit')return{ch:overlay(n,prm(c),jdOf(T())),t:'Transit (Gochara) · '+view.d};
+if(m=='prog'){const age=(jdOf(T())-n.jd)/365.2422;return{ch:overlay(n,prm(c),n.jd+age),t:'Secondary progression · age '+age.toFixed(1)}}
+if(m=='return'){const r=solarReturn(c,n,view.y);return{ch:compute({...prm(c),jd:r}),t:'Solar return '+view.y+' · '+fL(msOf(r),c.tz)}}
+return{ch:n,t:'Birth chart'}}
+/* ---------- analysis ---------- */
+const lordH=(n,h)=>SL[(n.lag+h-1)%12],hSg=(n,i)=>(n.pl[i].sg-n.lag+12)%12+1,KEN=[1,4,7,10];
+function yogas(n){const P=n.pl,o=[],H=i=>hSg(n,i),L=h=>lordH(n,h),adm=(a,b)=>a!=b&&(P[a].sg==P[b].sg||(OWN[b]?.includes(P[a].sg)&&OWN[a]?.includes(P[b].sg))),rel=(a,b)=>(P[a].sg-P[b].sg+12)%12;
+if(KEN.includes(rel(4,1)+1))o.push(['Gajakesari','Jupiter in a kendra from the Moon: wisdom, standing, resilience']);
+if(P[0].sg==P[3].sg)o.push(['Budhaditya','Sun+Mercury together: sharp intellect, authority']);
+if(P[1].sg==P[2].sg)o.push(['Chandra-Mangala','Moon+Mars: drive for earning, emotional intensity']);
+[[2,'Ruchaka'],[3,'Bhadra'],[4,'Hamsa'],[5,'Malavya'],[6,'Shasha']].forEach(([i,nm])=>{if(['Exalted','Own sign','Moolatrikona'].includes(P[i].dig)&&KEN.includes(H(i)))o.push([nm+' (Mahapurusha)',PN[i]+' strong in a kendra: marked talent'])});
+const a2=[2,3,4,5,6].filter(i=>rel(i,1)==1),a12=[2,3,4,5,6].filter(i=>rel(i,1)==11),w=[2,3,4,5,6].filter(i=>rel(i,1)==0);
+if(a2.length&&a12.length)o.push(['Durudhara','Planets on both sides of the Moon: comfort, support']);else if(a2.length)o.push(['Sunapha','Planet 2nd from Moon: self-earned means']);else if(a12.length)o.push(['Anapha','Planet 12th from Moon: dignity, good health']);
+else if(!w.length)o.push(['Kemadruma (check cancellations)','Moon isolated: emotional solitude; cancelled by kendra planets']);
+const kl=[4,7,10].map(L),tl=[5,9].map(L);for(const a of kl)for(const b of tl)if(adm(a,b))o.push(['Raja yoga',PN[a]+'+'+PN[b]+' (kendra & trikona lords '+(P[a].sg==P[b].sg?'conjunct':'exchange signs')+')']);
+for(let i=2;i<7;i++)if(kl.includes(i)&&tl.includes(i))o.push(['Yogakaraka',PN[i]+' rules a kendra and a trikona']);
+const dl=[2,5,9,11].map(L);for(let x=0;x<4;x++)for(let y=x+1;y<4;y++)if(adm(dl[x],dl[y]))o.push(['Dhana yoga',PN[dl[x]]+'+'+PN[dl[y]]+' (wealth-house lords linked)']);
+[6,8,12].forEach(h=>{const l=L(h);if([6,8,12].includes(H(l)))o.push(['Viparita Raja ('+h+'th lord)',PN[l]+' in a dusthana: gain through reversals'])});
+for(let i=0;i<7;i++)if(P[i].dig=='Debilitated'){const d=SL[P[i].sg];if(KEN.includes(H(d))||KEN.includes(rel(d,1)+1))o.push(['Neecha Bhanga (partial)',PN[i]+' debilitation eased by its dispositor in a kendra'])}
+for(let a=0;a<7;a++)for(let b=a+1;b<7;b++)if(P[a].sg!=P[b].sg&&adm(a,b))o.push(['Parivartana',PN[a]+' ⇄ '+PN[b]+' (sign exchange)']);
+if([0,1,2,3,4,5,6].every(i=>mod(P[i].lon-P[7].lon)<180)||[0,1,2,3,4,5,6].every(i=>mod(P[i].lon-P[7].lon)>180))o.push(['Kala Sarpa','All planets hemmed between Rahu and Ketu: karmic intensity']);
+if([1,2,4,7,8,12].includes(H(2)))o.push(['Mangal (Kuja) dosha','Mars in house '+H(2)+' from Lagna: check partner’s chart']);
+if(P[4].sg==P[7].sg)o.push(['Guru-Chandala','Jupiter with Rahu: unconventional wisdom, mind the advice you trust']);
+if(P[1].sg==P[6].sg)o.push(['Vish (Moon+Saturn)','Moon with Saturn: seriousness, emotional restraint']);
+if([0,1].some(i=>P[i].sg==P[7].sg||P[i].sg==P[8].sg))o.push(['Grahan (eclipse) axis','Luminary with a node: karmic emphasis on that house']);
+return o}
+const ASP=[[7],[7],[4,7,8],[7],[5,7,9],[7],[3,7,10],[5,7,9],[5,7,9]];
+const drishti=n=>n.pl.map(p=>ASP[p.i].map(a=>(p.sg+a-1)%12)).map((ss,i)=>({i,t:n.pl.filter(q=>q.i!=i&&ss.includes(q.sg)).map(q=>PS[q.i])}));
+const AT=[[0,'Conjunction',8,'#f5c45e'],[60,'Sextile',5,'#5eead4'],[90,'Square',6,'#ff6b81'],[120,'Trine',6,'#6ea8ff'],[180,'Opposition',7,'#ff9f5a']];
+function aspects(ch){const o=[];for(let a=0;a<9;a++)for(let b=a+1;b<9;b++){if(a==7&&b==8)continue;const d=angd(ch.pl[a].lon,ch.pl[b].lon);for(const[g,n,orb,col]of AT){const e=Math.abs(d-g);if(e<=orb){o.push({a,b,n,g,e,col,w:1-e/orb});break}}}return o}
+function patterns(ch,as){const has=(a,b,g)=>as.some(x=>x.g==g&&((x.a==a&&x.b==b)||(x.a==b&&x.b==a))),o=[];
+for(let a=0;a<7;a++)for(let b=a+1;b<7;b++)for(let c=b+1;c<7;c++){if(has(a,b,120)&&has(b,c,120)&&has(a,c,120))o.push({t:'Grand Trine',p:[a,b,c],col:'#6ea8ff',d:'Effortless flow between '+[a,b,c].map(i=>PS[i]).join('-')});
+for(const[x,y,z]of[[a,b,c],[a,c,b],[b,c,a]])if(has(x,y,180)&&has(x,z,90)&&has(y,z,90))o.push({t:'T-Square',p:[x,y,z],col:'#ff6b81',d:'Tension resolved through '+PS[z]+' (apex)'})}
+for(let s=0;s<12;s++){const g=ch.pl.slice(0,7).filter(p=>p.sg==s);if(g.length>=3)o.push({t:'Stellium',p:g.map(p=>p.i),col:'#f5c45e',d:g.length+' planets in '+SIGNS[s]+': concentrated focus'})}return o}
+const GEM=['Ruby (Manikya)','Pearl (Moti)','Red coral (Moonga)','Emerald (Panna)','Yellow sapphire (Pukhraj)','Diamond / white sapphire','Blue sapphire (Neelam, test with caution)','Hessonite (Gomed)','Cat’s eye (Lehsunia)'];
+const DOS=['Pitta','Kapha','Pitta','Vata','Kapha','Kapha','Vata','Vata','Pitta'],ELD=['Pitta','Kapha','Vata','Kapha'];
+const ORG=['heart, eyes, bones, vitality','blood, fluids, chest, mind','blood, muscles, bile, injuries','nerves, skin, lungs, speech','liver, fats, pancreas','kidneys, reproductive/hormonal system','joints, bones, chronic conditions','toxins, mysterious/neuro-psychic issues','immunity, sudden/inflammatory issues'];
+const BODY=['head, brain','face, throat, neck','arms, shoulders, lungs, nerves','chest, stomach, breasts','heart, upper back, spine','intestines, digestion','kidneys, lower back, skin','reproductive, excretory organs','hips, thighs, liver','knees, joints, skin','calves, ankles, circulation','feet, lymph, immunity'];
+const PKW=['vitality, authority','emotion, home, mind','drive, conflict, courage','communication, trade, intellect','growth, luck, teaching','love, art, money','discipline, delay, karma','ambition, foreign, obsession','detachment, spirituality, loss'];
+const ANG=['self, vitality, how you show up','roots, home, family, inner life','relationships, partners, contracts','career, status, public image'];
+const GANA=['Deva','Manushya','Rakshasa'],GN=[[0,4,6,7,12,14,16,21,26],[1,3,5,10,11,19,20,24,25],[2,8,9,13,15,17,18,22,23]];
+function ayur(n){const P=n.pl,sc={Vata:0,Pitta:0,Kapha:0},add=(d,w)=>sc[d]+=w;add(ELD[n.lag%4],2);add(DOS[lordH(n,1)],2);add(ELD[P[1].sg%4],2);add(DOS[SL[P[1].sg]],1);add(ELD[P[0].sg%4],1);P.filter(p=>p.house==1).forEach(p=>add(DOS[p.i],1));
+const t=sc.Vata+sc.Pitta+sc.Kapha,r=Object.entries(sc).sort((a,b)=>b[1]-a[1]),fl=[];
+const h6=P.filter(p=>hSg(n,p.i)==6),l1=lordH(n,1);if(P[l1].dig=='Debilitated')fl.push('Lagna lord '+PN[l1]+' is debilitated: build vitality gradually');if(P[l1].cb)fl.push('Lagna lord is combust: guard energy and sleep');
+if(KEN.length&&[6,8,12].includes(hSg(n,l1)))fl.push('Lagna lord sits in a dusthana: constitution needs steady routine');
+h6.forEach(p=>fl.push(PN[p.i]+' in 6th house: sensitivities of '+ORG[p.i]));P.slice(0,9).filter(p=>p.dig=='Debilitated'||p.cb).forEach(p=>fl.push(PN[p.i]+(p.cb?' combust':' debilitated')+': watch '+ORG[p.i]));
+const mal=new Set(P.filter(p=>[0,2,6,7,8].includes(p.i)).map(p=>p.sg));const tip={Vata:'warm, oily, regular meals and sleep; calming routines',Pitta:'cooling foods, avoid excess heat/spice and overwork',Kapha:'light, warm, stimulating food; regular vigorous movement'};
+return`<p><b>Dominant dosha (heuristic):</b> ${r.map(([d,v])=>d+' '+Math.round(v/t*100)+'%').join(' · ')}<br><span class=m>Supportive lifestyle for ${r[0][0]}: ${tip[r[0][0]]}.</span></p><p><b>Sensitive regions</b> (signs holding Sun/Mars/Saturn/nodes): ${[...mal].map(s=>SIGNS[s]+' → '+BODY[s]).join('; ')}</p>${fl.length?'<p><b>Flags</b></p><ul>'+fl.map(x=>'<li>'+x+'</li>').join('')+'</ul>':''}<p class=m>Traditional symbolic indications, not diagnosis. See a clinician for health decisions.</p>`}
+function neuro(n){const P=n.pl,m=P[1],me=P[3],o=[],gi=GN.findIndex(g=>g.includes(m.nk));
+o.push(`Moon in ${NAK[m.nk]} (${GANA[gi]} gana) · Moon ${m.dig||'—'}, house ${m.house}`);
+const afM=P.filter(p=>[2,6,7,8].includes(p.i)&&p.sg==m.sg).map(p=>PN[p.i]);if(afM.length)o.push('Moon conjunct '+afM.join(', ')+': emotional intensity, rumination or restlessness to manage');
+if([6,8,12].includes(hSg(n,1)))o.push('Moon in a dusthana: sensitive mind, benefits from routine and rest');
+o.push(`Mercury ${me.dig||'—'}${me.cb?', combust':''}${me.rx?', retrograde (inward, non-linear thinker)':''} in ${SIGNS[me.sg]}`);
+const st=['intuitive & fast, acts on impulse','practical & sequential, learns by doing','abstract & verbal, learns by discussing','empathic & associative, learns by feeling'][me.sg%4];o.push('Thinking style (by Mercury’s element): '+st);
+[7,8].forEach(i=>{if([1,3].some(k=>P[k].sg==P[i].sg))o.push(PN[i]+' with Moon/Mercury: unusual perception; grounding practices help')});
+const h4=P.filter(p=>hSg(n,p.i)==4||hSg(n,p.i)==5).map(p=>PN[p.i]);if(h4.length)o.push('Occupying mind/intellect houses (4th, 5th): '+h4.join(', '));
+return'<ul>'+o.map(x=>'<li>'+x+'</li>').join('')+'</ul><p class=m>Symbolic indicators of temperament, not a clinical assessment.</p>'}
+function gems(n,dn){const L=[1,5,9].map(h=>lordH(n,h)),bad=[6,8,12].map(h=>lordH(n,h)),u=[...new Set(L)];
+return`<p><b>Traditionally favourable (lords of Lagna, 5th, 9th):</b></p><ul>${u.map(i=>`<li>${PN[i]} → ${GEM[i]} <span class=m>(${n.pl[i].dig||'—'}, house ${n.pl[i].house}${bad.includes(i)?' · also rules a dusthana: use caution':''})</span></li>`).join('')}</ul>${dn!=null?`<p>Current Mahadasha lord: ${PN[dn]} → ${GEM[dn]}</p>`:''}<p class=m>Tradition only; gems are not a medical or financial remedy. Consult a qualified astrologer before wearing one.</p>`}
+function dashaNow(n,sys){const{i0,st}=dashaStart(sys,n.pl[1].lon,n.jd),now=nowJD();let list=mahas(sys,i0,st),o=[];for(let l=0;l<3;l++){const p=list.find(x=>now>=x.s&&now<x.e);if(!p)break;o.push(p);list=subs(sys,p)}return o}
+const dName=(sys,p)=>sys=='vim'?PN[p.l]:DS.yog.n[p.k]+'('+PS[p.l]+')';
+function chain(n,sys){const c=dashaNow(n,sys);return c.length?c.map(p=>dName(sys,p)).join('>')+' until '+ds(c[c.length-1].e):'—'}
+function digest(c){const n=natal(c);return`${c.name} b.${c.date} ${c.time} ${c.tz} @${(+c.lat).toFixed(2)},${(+c.lon).toFixed(2)}. ${AYN[S.cfg.ay]}; houses ${HSN[S.cfg.hs]}. Asc ${SG[n.lag]}${(n.asc%30).toFixed(1)}. `+n.pl.map(p=>`${PS[p.i]} ${SG[p.sg]}${p.dg.toFixed(1)} ${NAB[p.nk]}${p.pd} H${p.house}${p.rx&&p.i<7?' R':''}${p.dig&&p.dig!='Neutral'?' '+p.dig.split(' ')[0].slice(0,5):''}${p.cb?' comb':''}`).join('; ')+`. Vimshottari now: ${chain(n,'vim')}. Yogas: ${yogas(n).map(y=>y[0]).join(', ')||'none'}`}
+/* ---------- chart drawing ---------- */
+const NPOLY=['200,0 300,100 200,200 100,100','0,0 200,0 100,100','0,0 100,100 0,200','0,200 100,100 200,200 100,300','0,200 100,300 0,400','0,400 100,300 200,400','200,400 300,300 200,200 100,300','200,400 300,300 400,400','400,400 300,300 400,200','400,200 300,300 200,200 300,100','400,200 300,100 400,0','400,0 300,100 200,0'],NC=[[200,100],[100,33],[33,100],[100,200],[33,300],[100,367],[200,300],[300,367],[367,300],[300,200],[367,100],[300,33]],NN=[[200,172],[100,72],[80,100],[150,200],[80,300],[100,330],[200,232],[300,330],[322,300],[250,200],[322,100],[300,70]];
+const lab=(p,dv)=>PS[p.i]+(dv==1?Math.floor(p.dg):'')+(p.rx&&p.i<7?'ᴿ':'');
+function cells(ch,dv,sign){if(dv==1&&S.cfg.pm=='house'&&!sign&&!ch.base0)return{H:ch.c.map((c,i)=>({sg:Math.floor(c/30),p:ch.pl.filter(p=>p.house==i+1).map(p=>p.i)})),ls:ch.lag,dv};
+const ls=dv==1?ch.lag:dsign(ch.asc,dv),sg=p=>dv==1?p.sg:dsign(p.lon,dv);return{H:Array.from({length:12},(_,i)=>({sg:(ls+i)%12,p:ch.pl.filter(p=>sg(p)==(ls+i)%12).map(p=>p.i)})),ls,dv}}
+const plTxt=(L,cx,cy,ch,dv)=>{const rows=Math.ceil(L.length/2);return L.map((i,k)=>{const r=k>>1,two=!(r==rows-1&&L.length%2),x=cx+(two?(k%2?23:-23):0),y=cy-(rows-1)*8+r*16+4;return`<text x="${x}" y="${y}" class=pt fill="${PC[i]}" data-a=pl data-i="${i}">${lab(ch.pl[i],dv)}</text>`}).join('')};
+function svgNorth(ch,dv){const cl=cells(ch,dv);let s='<svg viewBox="-4 -4 408 408" class=ch>';cl.H.forEach((h,i)=>{s+=`<polygon points="${NPOLY[i]}" class=hp /><text x="${NN[i][0]}" y="${NN[i][1]}" class=sn>${h.sg+1}</text>`+plTxt(h.p,NC[i][0],NC[i][1],ch,dv)});return s+'<text x="200" y="188" class=sn>Asc</text></svg>'}
+function svgSouth(ch,dv){const cl=cells(ch,dv,1),P=[[1,0],[2,0],[3,0],[3,1],[3,2],[3,3],[2,3],[1,3],[0,3],[0,2],[0,1],[0,0]];let s='<svg viewBox="-4 -4 408 408" class=ch>';
+for(let sg=0;sg<12;sg++){const[x,y]=P[sg].map(v=>v*100),h=cl.H.find(h=>h.sg==sg);s+=`<rect x="${x}" y="${y}" width=100 height=100 class=hp /><text x="${x+6}" y="${y+14}" class=sn style="text-anchor:start">${SG[sg]}</text>`+(sg==cl.ls?`<path d="M${x} ${y+22}L${x+22} ${y}" class=hp style="stroke:#f5c45e"/><text x="${x+96}" y="${y+14}" class=sn style="text-anchor:end;fill:#f5c45e">Asc</text>`:'')+plTxt(h.p,x+50,y+58,ch,dv)}
+return s+`<text x="200" y="195" class=sn style="font-size:13px">${dv==1?'Rashi':'D'+dv}</text></svg>`}
+function svgWheel(ch){const cx=210,cy=210,A=ch.asc,ang=l=>(180+mod(l-A))*D2R,P=(l,r)=>[cx+r*Math.cos(ang(l)),cy-r*Math.sin(ang(l))],f=n=>n.toFixed(1);
+const seg=(l0,l1,r0,r1,cls)=>{const a=P(l0,r1),b=P(l1,r1),c=P(l1,r0),d=P(l0,r0);return`<path d="M${f(a[0])} ${f(a[1])}A${r1} ${r1} 0 0 0 ${f(b[0])} ${f(b[1])}L${f(c[0])} ${f(c[1])}A${r0} ${r0} 0 0 1 ${f(d[0])} ${f(d[1])}Z" class="${cls}"/>`},tx=(l,r,t,c='wt')=>{const p=P(l,r);return`<text x="${f(p[0])}" y="${f(p[1]+3)}" class="${c}">${t}</text>`};let s='<svg viewBox="0 0 420 420" class=ch>';
+for(let i=0;i<12;i++)s+=seg(i*30,i*30+30,170,200,'e'+i%4)+tx(i*30+15,185,SG[i],'wt big');
+const w=360/27;for(let i=0;i<27;i++)s+=seg(i*w,(i+1)*w,143,170,'nk'+i%2)+tx(i*w+w/2,156.5,NAB[i],'wt sm');
+ch.c.forEach((c,i)=>{const a=P(c,100),b=P(c,i%3==0?200:143);s+=`<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" class="${i==0?'hl as':'hl'}"/>`+tx(c+mod(ch.c[(i+1)%12]-c)/2,88,i+1,'wt hn')});
+s+=`<circle cx=210 cy=210 r=100 class=hp />`;const L=ch.pl.map(p=>({i:p.i,l:p.lon,d:p.lon})).sort((a,b)=>a.l-b.l),n=L.length;
+for(let t=0;t<40;t++)for(let k=0;k<n;k++){const a=L[k],b=L[(k+1)%n],g=mod(b.d-a.d);if(g<9){a.d-=(9-g)/2;b.d+=(9-g)/2}}
+for(const q of L){const p=ch.pl[q.i],a=P(p.lon,143),b=P(p.lon,138);s+=`<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" stroke="${PC[q.i]}"/>`+tx(q.d,124,PS[q.i]+(p.rx&&p.i<7?'ᴿ':''),'wt pt2" fill="'+PC[q.i]+'" data-a=pl data-i="'+q.i)+tx(q.d,110,Math.floor(p.dg)+'°','wt sm')}
+return s+`<text x=210 y=205 class="wt big">${SG[ch.lag]} Asc</text><text x=210 y=222 class="wt sm">${fD(ch.asc%30)}</text></svg>`}
+function svgEnergy(ch){const cx=190,cy=190,A=ch.asc,ang=l=>(180+mod(l-A))*D2R,P=(l,r)=>[cx+r*Math.cos(ang(l)),cy-r*Math.sin(ang(l))],f=n=>n.toFixed(1),as=aspects(ch),pt=patterns(ch,as);let s='<svg viewBox="0 0 380 380" class=ch><circle cx=190 cy=190 r=140 class=hp />';
+for(let i=0;i<12;i++){const a=P(i*30,140),b=P(i*30,150),t=P(i*30+15,162);s+=`<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" class=hl /><text x="${f(t[0])}" y="${f(t[1]+3)}" class="wt sm">${SG[i]}</text>`}
+for(const q of pt){const pts=q.p.map(i=>P(ch.pl[i].lon,140).map(f).join(',')).join(' ');s+=`<polygon points="${pts}" fill="${q.col}" fill-opacity=".14" stroke="${q.col}" stroke-dasharray="4 3"/>`}
+for(const x of as){if(x.g==0)continue;const a=P(ch.pl[x.a].lon,140),b=P(ch.pl[x.b].lon,140);s+=`<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" stroke="${x.col}" stroke-width="${(1+2.2*x.w).toFixed(1)}" opacity="${(.3+.7*x.w).toFixed(2)}"/>`}
+for(const p of ch.pl){const a=P(p.lon,140),t=P(p.lon,124);s+=`<circle cx="${f(a[0])}" cy="${f(a[1])}" r=5 fill="${PC[p.i]}" data-a=pl data-i="${p.i}"/><text x="${f(t[0])}" y="${f(t[1]+3)}" class="wt pt2" fill="${PC[p.i]}">${PS[p.i]}</text>`}
+return{svg:s+'</svg>',as,pt}}
+/* ---------- views ---------- */
+const seg=(a,cur,opts)=>`<div class=seg>${opts.map(([v,l])=>`<b class="${v==cur?'on':''}" data-a="${a}" data-v="${v}">${l}</b>`).join('')}</div>`;
+function tChart(c){const{ch,t}=viewCh(c),dv=+S.cfg.dv,st=S.cfg.st;let sv=st=='wheel'?svgWheel(ch):st=='south'?svgSouth(ch,dv):svgNorth(ch,dv);
+const ctl=view.m=='return'?`<div class=row><input type=number id=vy value="${view.y}" style="width:90px"><button data-a=vy>Go</button></div>`:view.m!='birth'?`<div class=row><button data-a=dd data-v=-30>‹30d</button><button data-a=dd data-v=-1>‹</button><input type=date id=vd value="${view.d}"><button data-a=dd data-v=1>›</button><button data-a=dd data-v=30>30d›</button><button data-a=dd data-v=0>Now</button></div>`:'';
+return`<div class=card>${seg('mode',view.m,[['birth','Birth'],['transit','Transit'],['prog','Progressed'],['return','Solar return']])}${ctl}<div class=m style="margin:6px 0">${esc(t)}</div>${seg('st',st,[['north','North'],['south','South'],['wheel','Wheel']])}
+<div class=row><select data-c=dv>${Object.entries(VN).map(([k,v])=>`<option value=${k} ${k==dv?'selected':''}>D${k} · ${v}</option>`).join('')}</select>${dv==1&&st=='north'?seg('pm',S.cfg.pm,[['house','By house system'],['sign','By sign']]):''}</div>${st=='wheel'&&dv!=1?'<div class=m>Wheel shows the Rashi (D1) longitudes.</div>':''}${sv}
+<div class=m>Asc ${fP(ch.asc)} · ${AYN[ch.ayId]} ${fD(ch.ay)} · ${HSN[ch.hs]}${ch.fb?' (polar latitude: Porphyry used)':''}</div></div>
+<div class=card><table class=tb><tr><th>Graha<th>Position<th>Nakshatra<th>H<th>°/day</tr>${ch.pl.map(p=>`<tr data-a=pl data-i=${p.i}><td style="color:${PC[p.i]}">${PS[p.i]}${p.rx&&p.i<7?'ᴿ':''}<td>${fP(p.lon)}<td>${NAK[p.nk]} ${p.pd}<td>${p.house}<td>${p.sp.toFixed(2)}</tr>`).join('')}</table></div>`}
+function tTime(c){const n=natal(c),sys=ui.dsys,{i0,st}=dashaStart(sys,n.pl[1].lon,n.jd),now=nowJD(),ms=mahas(sys,i0,st);
+const rows=(list,key,l)=>list.map((p,i)=>{const k=key+'.'+i,on=now>=p.s&&now<p.e;return`<div class="dr ${on?'now':''}" style="margin-left:${l*12}px" data-a=op data-k="${k}"><b>${dName(sys,p)}</b><span>${ds(p.s)} → ${ds(p.e)}</span></div>`+(ui.open[k]&&l<2?rows(subs(sys,p),k,l+1):'')}).join('');
+const tr=compute({...prm(c),jd:now}),ss=(tr.pl[6].sg-n.pl[1].sg+12)%12,ssT=ss==11?'Sade Sati: rising phase (Saturn 12th from Moon)':ss==0?'Sade Sati: peak phase (Saturn over natal Moon sign)':ss==1?'Sade Sati: setting phase (Saturn 2nd from Moon)':ss==7?'Ashtama Shani (Saturn 8th from Moon)':ss==3?'Ardhashtama Shani (Saturn 4th from Moon)':'No Sade Sati / Shani dosha now';
+return`<div class=card>${seg('dsys',sys,[['vim','Vimshottari'],['yog','Yogini']])}<p><b>Now:</b> ${chain(n,sys)}</p><div class=m>Birth Moon: ${NAK[n.pl[1].nk]} pada ${n.pl[1].pd}. Tap a period to open sub-periods (Antar → Pratyantar). Year = 365.25 days.</div>${rows(ms,'m',0)}</div>
+<div class=card><b>Gochara (transits now)</b><div class=m>${ssT}</div><table class=tb><tr><th>Graha<th>Sign<th>From Asc<th>From Moon</tr>${tr.pl.map(p=>`<tr><td style="color:${PC[p.i]}">${PS[p.i]}${p.rx&&p.i<7?'ᴿ':''}<td>${fP(p.lon)}<td>${(p.sg-n.lag+12)%12+1}<td>${(p.sg-n.pl[1].sg+12)%12+1}</tr>`).join('')}</table></div>`}
+function tSky(){const jd=ui.sky??nowJD(),ay=S.cfg.ay,sn=helioSnap(jd,ay),cx=190,cy=190,rd=r=>16+39*Math.sqrt(r),f=n=>n.toFixed(1),T=Tc(jd),ch=compute({jd,lat:0,lon:0,ay,hs:'E',nd:S.cfg.nd}),NM={me:'Mercury',ve:'Venus',ea:'Earth',ma:'Mars',ju:'Jupiter',sa:'Saturn'},CL={me:'#b8b8c8',ve:'#ffd9a0',ea:'#6ea8ff',ma:'#ff6b6b',ju:'#f0c070',sa:'#e0d090'};
+let s='<svg viewBox="0 0 380 380" class=ch><defs><marker id=ar markerWidth=6 markerHeight=6 refX=5 refY=3 orient=auto><path d="M0 0L6 3L0 6Z" fill=#fff /></marker></defs>';
+for(let i=0;i<12;i++){const a=i*30*D2R,m=(i*30+15)*D2R;s+=`<line x1="${f(cx+168*Math.cos(a))}" y1="${f(cy-168*Math.sin(a))}" x2="${f(cx+182*Math.cos(a))}" y2="${f(cy-182*Math.sin(a))}" class=hl /><text x="${f(cx+175*Math.cos(m))}" y="${f(cy-175*Math.sin(m)+3)}" class="wt sm">${SG[i]}</text>`}
+s+=`<circle cx=190 cy=190 r=168 class=hp />`;for(const r of[.4,1,2,5,9.5])s+=`<circle cx=190 cy=190 r="${f(rd(r))}" fill=none stroke="#2a3566" stroke-dasharray="2 4" />`;s+=`<circle cx=190 cy=190 r=7 fill=#ffb347 /><text x=190 y=205 class="wt sm">Sun</text>`;
+const E=sn.find(q=>q.k=='ea'),ep=[cx+rd(E.r)*Math.cos(E.lon*D2R),cy-rd(E.r)*Math.sin(E.lon*D2R)];
+for(const q of sn){const R=rd(q.r),x=cx+R*Math.cos(q.lon*D2R),y=cy-R*Math.sin(q.lon*D2R),n=Math.hypot(q.vx,q.vy),L=6+.5*q.spd,dx=q.vx/n*L,dy=-q.vy/n*L;
+if(ui.sight&&q.k!='ea'){const ang=Math.atan2(-(y-ep[1]),x-ep[0]);s+=`<line x1="${f(ep[0])}" y1="${f(ep[1])}" x2="${f(cx+168*Math.cos(ang)*0+ep[0]+400*Math.cos(ang))}" y2="${f(ep[1]-400*Math.sin(ang))}" stroke="${CL[q.k]}" opacity=".25" clip-path="url(#cp)"/>`}
+s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${q.k=='ju'||q.k=='sa'?6:4.5}" fill="${CL[q.k]}"/><line x1="${f(x)}" y1="${f(y)}" x2="${f(x+dx)}" y2="${f(y+dy)}" stroke=#fff stroke-width=1.6 marker-end="url(#ar)"/><text x="${f(x)}" y="${f(y-9)}" class="wt sm" fill="${CL[q.k]}">${NM[q.k]}</text><text x="${f(x)}" y="${f(y+17)}" class="wt sm" style="fill:#8e99c8">${q.r.toFixed(2)} AU</text>`}
+s+='</svg>';if(ui.sight)s=s.replace('<defs>','<defs><clipPath id=cp><circle cx=190 cy=190 r=168 /></clipPath>');
+const tbl=ch.pl.slice(0,7).map(p=>{const h=sn.find(q=>q.k==KEYM[p.i]);return`<tr><td style="color:${PC[p.i]}">${PN[p.i]}<td>${h?h.r.toFixed(3):'—'}<td>${p.i==1?(p.r*149597870.7/1e3).toFixed(0)+'k km':p.r.toFixed(3)}<td>${h?h.spd.toFixed(1):'—'}<td>${p.sp.toFixed(3)}${p.rx?' ℞':''}<td>${fP(p.lon)}</tr>`}).join('');
+return`<div class=card><div class=row><button data-a=sd data-v=-30>‹30d</button><button data-a=sd data-v=-1>‹</button><input type=date id=sdt value="${ds(jd)}"><button data-a=sd data-v=1>›</button><button data-a=sd data-v=30>30d›</button><button data-a=sd data-v=0>Now</button></div>
+<div class=m>Top-down solar system, Sun at centre, zodiac ring (${AYN[ay].split(' (')[0]}) around it. White arrows show each planet’s direction of motion; arrow length ∝ orbital speed. Orbit spacing is compressed (square-root scale). <label><input type=checkbox data-c=sight ${ui.sight?'checked':''}> Sight lines from Earth</label></div>${s}
+<table class=tb><tr><th>Body<th>Sun-dist AU<th>Earth-dist<th>km/s<th>°/day<th>Sign</tr>${tbl}</table><div class=m>℞ = apparent retrograde as seen from Earth. Distances from Sun are heliocentric; speeds are orbital (vis-viva).</div></div>`}
+const KEYM={0:'ea',2:'ma',3:'me',4:'ju',5:'ve',6:'sa'};
+function tEnergy(c){const{ch,t}=viewCh(c),{svg,as,pt}=svgEnergy(ch),el=[0,0,0,0],md=[0,0,0];ch.pl.slice(0,7).forEach(p=>{el[p.sg%4]++;md[p.sg%3]++});el[ch.lag%4]++;md[ch.lag%3]++;
+const EN=['Fire','Earth','Air','Water'],MN=['Movable','Fixed','Dual'],EC=['#ff8f5a','#9ccf6b','#8fd3ff','#6e8bff'],bar=(a,N,C)=>a.map((v,i)=>`<div class=bar><span>${N[i]}</span><i style="width:${v*11}%;background:${C?C[i]:'#f5c45e'}"></i><em>${v}</em></div>`).join('');
+return`<div class=card><b>Energy geometry</b><div class=m>${esc(t)} · Planets sit on the zodiac circle; lines are Western-style angular links (thicker = tighter). Blue triangles = Grand Trine, red = T-Square. Tap a planet.</div>${svg}
+<div class=leg><span style="color:#6ea8ff">━ Trine</span><span style="color:#5eead4">━ Sextile</span><span style="color:#ff6b81">━ Square</span><span style="color:#ff9f5a">━ Opposition</span></div></div>
+<div class=card><b>Patterns</b>${pt.length?pt.map(q=>`<p><b style="color:${q.col}">${q.t}</b> · ${q.d}</p>`).join(''):'<p class=m>No major geometric pattern.</p>'}<b>Balance (7 planets + Lagna)</b>${bar(el,EN,EC)}${bar(md,MN)}<p class=m>Dominant element: ${EN[el.indexOf(Math.max(...el))]} · quality: ${MN[md.indexOf(Math.max(...md))]}</p></div>
+<div class=card><b>Aspect list</b><table class=tb>${as.sort((a,b)=>b.w-a.w).slice(0,14).map(x=>`<tr><td>${PS[x.a]}–${PS[x.b]}<td style="color:${x.col}">${x.n}<td>${x.e.toFixed(1)}° orb</tr>`).join('')}</table></div>`}
+const CITY=[['Delhi',28.61,77.21],['Mumbai',19.08,72.88],['Bengaluru',12.97,77.59],['Kolkata',22.57,88.36],['Chennai',13.08,80.27],['Kathmandu',27.72,85.32],['Dubai',25.2,55.27],['London',51.51,-.13],['Paris',48.86,2.35],['Berlin',52.52,13.4],['Rome',41.9,12.5],['Moscow',55.75,37.62],['Istanbul',41.01,28.98],['Cairo',30.04,31.24],['Lagos',6.52,3.38],['Nairobi',-1.29,36.82],['Johannesburg',-26.2,28.05],['New York',40.71,-74.01],['Chicago',41.88,-87.63],['Los Angeles',34.05,-118.24],['Toronto',43.65,-79.38],['Mexico City',19.43,-99.13],['São Paulo',-23.55,-46.63],['Buenos Aires',-34.6,-58.38],['Singapore',1.35,103.82],['Bangkok',13.76,100.5],['Hong Kong',22.32,114.17],['Shanghai',31.23,121.47],['Tokyo',35.68,139.69],['Sydney',-33.87,151.21],['Auckland',-36.85,174.76]];
+let WORLD=null;const wrap=x=>((x+540)%360)-180;
+function acg(c){const n=natal(c),g=gmst(n.jd),out=[];for(const p of n.pl.slice(0,9)){const q=eqOf(p.trop,p.lat,n.eD);out.push({i:p.i,ra:q.ra,dec:q.dec,mc:wrap(q.ra-g),g})}return out}
+function acgAt(L,lat,lon){const o=[];for(const q of L){const km=(dl,la)=>Math.abs(wrap(dl))*Math.cos(la*D2R)*111.2;
+o.push({i:q.i,t:'MC',d:km(lon-q.mc,lat)},{i:q.i,t:'IC',d:km(lon-q.mc-180,lat)});const cH=-Math.tan(lat*D2R)*Math.tan(q.dec*D2R);if(Math.abs(cH)<=1){const H=Math.acos(cH)*R2D;o.push({i:q.i,t:'ASC',d:km(lon-wrap(q.ra-H-q.g),lat)},{i:q.i,t:'DSC',d:km(lon-wrap(q.ra+H-q.g),lat)})}}return o}
+function tMap(c){return`<div class=card><b>Astrocartography</b><div class=m>Where each planet was rising (ASC), setting (DSC), culminating (MC) or at the lower meridian (IC) at your birth moment. Tap the map or choose a city.</div>
+<div class=row>${PS.slice(0,9).map((p,i)=>`<b class="chip ${ui.mp.sel.includes(i)?'on':''}" data-a=mpp data-i=${i} style="border-color:${PC[i]}">${p}</b>`).join('')}</div><canvas id=map width=720 height=360 style="width:100%;border-radius:10px;background:#0c1330"></canvas>
+<div class=row><select data-c=city><option value="">City…</option>${CITY.map((x,i)=>`<option value=${i}>${x[0]}</option>`).join('')}</select></div><div id=mphit class=m>—</div><div class=m>Vertical solid line = MC, vertical dashed = IC, curves = ASC (rising) and DSC (setting). MC: career &amp; public image · IC: home &amp; roots · ASC: self &amp; vitality · DSC: partnerships.</div></div>`}
+function drawMap(c){const cv=$('#map');if(!cv)return;const g=cv.getContext('2d'),X=l=>(l+180)*2,Y=l=>(90-l)*2;g.clearRect(0,0,720,360);g.strokeStyle='#1d2850';g.lineWidth=1;for(let l=-180;l<=180;l+=30){g.beginPath();g.moveTo(X(l),0);g.lineTo(X(l),360);g.stroke()}for(let l=-60;l<=60;l+=30){g.beginPath();g.moveTo(0,Y(l));g.lineTo(720,Y(l));g.stroke()}
+if(WORLD){g.fillStyle='#18224a';for(const f of WORLD.features){const G=f.geometry;if(!G)continue;for(const poly of G.type=='Polygon'?[G.coordinates]:G.coordinates)for(const ring of poly){g.beginPath();ring.forEach(([a,b],k)=>k?g.lineTo(X(a),Y(b)):g.moveTo(X(a),Y(b)));g.fill()}}}
+g.font='bold 17px sans-serif';const L=acg(c);for(const q of L){if(!ui.mp.sel.includes(q.i))continue;g.strokeStyle=g.fillStyle=PC[q.i];g.lineWidth=1.6;g.setLineDash([]);g.beginPath();g.moveTo(X(q.mc),0);g.lineTo(X(q.mc),360);g.stroke();g.fillText(PS[q.i]+' MC',X(q.mc)+3,16);
+g.setLineDash([6,4]);const ic=wrap(q.mc+180);g.beginPath();g.moveTo(X(ic),0);g.lineTo(X(ic),360);g.stroke();g.fillText(PS[q.i]+' IC',X(ic)+3,36);g.setLineDash([]);
+for(const sgn of[-1,1]){g.beginPath();let pr=null;for(let la=-80;la<=80;la+=2){const cH=-Math.tan(la*D2R)*Math.tan(q.dec*D2R);if(Math.abs(cH)>1){pr=null;continue}const H=Math.acos(cH)*R2D,lo=wrap(q.ra+sgn*H-q.g);if(pr!==null&&Math.abs(lo-pr)>180)g.moveTo(X(lo),Y(la));else g.lineTo(X(lo),Y(la));if(pr===null)g.moveTo(X(lo),Y(la));pr=lo}g.stroke()}}
+g.setLineDash([]);g.fillStyle='#fff';if(ui.mp.ph){g.beginPath();g.arc(X(ui.mp.ph[1]),Y(ui.mp.ph[0]),4,0,7);g.fill()}}
+function hitText(c){const h=ui.mp.ph;if(!h)return'—';const L=acg(c),r=acgAt(L,h[0],h[1]).filter(x=>ui.mp.sel.includes(x.i)&&x.d<900).sort((a,b)=>a.d-b.d);const K={MC:ANG[3],IC:ANG[1],ASC:ANG[0],DSC:ANG[2]};
+return`<b>${h[0].toFixed(1)}°, ${h[1].toFixed(1)}°</b>`+(r.length?'<ul>'+r.map(x=>`<li><span style="color:${PC[x.i]}">${PN[x.i]} ${x.t}</span> · ${Math.round(x.d)} km · ${PKW[x.i]} in ${K[x.t]}</li>`).join('')+'</ul><button data-a=reloc>Open relocated chart here</button>':'<div class=m>No selected planetary line within ~900 km.</div>')}
+function tInsights(c){const n=natal(c),wd=new Date(msOf(n.jd)+tzFix(c.tz,msOf(n.jd))*6e4).getUTCDay(),pg=panchanga(n,wd),y=yogas(n),dn=dashaNow(n,'vim')[0];
+const dr=drishti(n);const acc=(t,b,o)=>`<details ${o?'open':''}><summary>${t}</summary>${b}</details>`;
+return`<div class=card>${acc('Panchanga (birth)',`<table class=tb><tr><td>Vara<td>${pg.vara}</tr><tr><td>Tithi<td>${pg.tithi}</tr><tr><td>Nakshatra<td>${pg.nak} pada ${pg.pd}</tr><tr><td>Yoga<td>${pg.yoga}</tr><tr><td>Karana<td>${pg.karana}</tr></table><div class=m>Civil weekday (sunrise-based vara not applied).</div>`,1)}
+${acc('Graha details',`<table class=tb><tr><th>Graha<th>Dignity<th>Notes<th>D9</tr>${n.pl.map(p=>`<tr data-a=pl data-i=${p.i}><td style="color:${PC[p.i]}">${PS[p.i]}<td>${p.dig||'—'}<td>${[p.cb?'combust':'',p.rx&&p.i<7?'retro':''].filter(Boolean).join(', ')||'—'}<td>${SG[dsign(p.lon,9)]}</tr>`).join('')}</table>`)}
+${acc('Yogas &amp; doshas ('+y.length+')',y.length?y.map(x=>`<p><b>${x[0]}</b><br><span class=m>${x[1]}</span></p>`).join('')+'<div class=m>Yoga logic uses classical sign-based houses from Lagna.</div>':'<p class=m>None detected.</p>')}
+${acc('Graha drishti (Vedic aspects)',`<table class=tb>${dr.map(d=>`<tr><td style="color:${PC[d.i]}">${PS[d.i]}<td>${d.t.join(', ')||'—'}</tr>`).join('')}</table>`)}
+${acc('Gemology',gems(n,dn?dn.l:null))}${acc('Ayurvedic astrology',ayur(n))}${acc('Neurology &amp; mind',neuro(n))}
+${acc('Planet themes',`<ul>${PN.map((p,i)=>`<li><b>${p}</b>: ${PKW[i]}</li>`).join('')}</ul>`)}</div>`}
+/* ---------- AI ---------- */
+const PRE=[['Claude (Anthropic)','anthropic','https://api.anthropic.com/v1/messages','claude-sonnet-5-5'],['OpenAI','openai','https://api.openai.com/v1/chat/completions','gpt-4.1'],['DeepSeek','openai','https://api.deepseek.com/chat/completions','deepseek-chat'],['Gemini (OpenAI-compat)','openai','https://generativelanguage.googleapis.com/v1beta/openai/chat/completions','gemini-2.5-flash'],['GitHub Models / Copilot','openai','https://models.github.ai/inference/chat/completions','openai/gpt-4.1'],['OpenRouter','openai','https://openrouter.ai/api/v1/chat/completions','anthropic/claude-sonnet-4.5'],['Local (Ollama)','openai','http://localhost:11434/v1/chat/completions','llama3.1']];
+const TOPICS=[['Overview','Give a concise overview of this chart: core temperament, strengths, challenges.'],['Career','Analyse career and public life (use D10 via chart_data).'],['Marriage','Analyse relationships and marriage (use D9 via chart_data).'],['Health','Analyse health tendencies and constitution (symbolic, not medical).'],['Wealth','Analyse wealth and finances.'],['Timing','What does the current dasha and transit period emphasise over the next 12 months?'],['Remedies','Suggest traditional remedies and lifestyle supports.']];
+function sections(c,s){const n=natal(c);s=String(s||'planets');const m=/^D?(\d+)$/i.exec(s);
+if(m&&VN[+m[1]]){const d=+m[1];return`D${d} ${VN[d]}: Asc ${SG[dsign(n.asc,d)]}; `+n.pl.map(p=>PS[p.i]+' '+SG[dsign(p.lon,d)]).join(', ')}
+if(s=='houses')return'Cusps('+HSN[S.cfg.hs]+'): '+n.c.map((x,i)=>(i+1)+':'+SG[Math.floor(x/30)]+(x%30).toFixed(1)).join(' ');
+if(s=='dasha'){const{i0,st}=dashaStart('vim',n.pl[1].lon,n.jd),now=nowJD();return mahas('vim',i0,st).filter(p=>p.e>now).slice(0,3).map(p=>`${PS[p.l]} ${ds(p.s)}→${ds(p.e)}: `+subs('vim',p).filter(a=>a.e>now).slice(0,5).map(a=>PS[a.l]+' to '+ds(a.e)).join(', ')).join('\n')}
+if(s=='panchanga'){const p=panchanga(n,new Date(msOf(n.jd)).getUTCDay());return JSON.stringify(p)}
+if(s=='yogas')return yogas(n).map(y=>y[0]+': '+y[1]).join('\n');
+if(s=='transits'||/^\d{4}-\d{2}-\d{2}$/.test(s)){const t=compute({...prm(c),jd:/^\d/.test(s)?Date.parse(s+'T12:00:00Z')/864e5+2440587.5:nowJD()});return'Transits '+(s=='transits'?'now':s)+': '+t.pl.map(p=>`${PS[p.i]} ${SG[p.sg]}${p.dg.toFixed(1)} H${(p.sg-n.lag+12)%12+1}${p.rx&&p.i<7?'R':''}`).join('; ')}
+return digest(c)}
+const LT=[{name:'chart_data',description:'Get computed Vedic chart data for the current native. section: planets|houses|dasha|panchanga|yogas|transits|YYYY-MM-DD (transits on date)|D2..D60 (varga e.g. D9, D10).',schema:{type:'object',properties:{section:{type:'string'}},required:['section']}}];
+const MR={};async function mcpRpc(s,method,params,id){const R=MR[s.url]||(MR[s.url]={}),h={'Content-Type':'application/json',Accept:'application/json, text/event-stream'};if(s.tok)h.Authorization='Bearer '+s.tok;if(R.sid)h['Mcp-Session-Id']=R.sid;
+const r=await fetch(s.url,{method:'POST',headers:h,body:JSON.stringify(id?{jsonrpc:'2.0',id,method,params}:{jsonrpc:'2.0',method,params})});const sid=r.headers.get('Mcp-Session-Id');if(sid)R.sid=sid;if(!id)return;const t=await r.text();let j;
+if((r.headers.get('content-type')||'').includes('event-stream'))j=t.split('\n').filter(l=>l.startsWith('data:')).map(l=>JSON.parse(l.slice(5))).find(x=>x.id==id);else j=JSON.parse(t);if(!j)throw new Error('empty MCP reply');if(j.error)throw new Error(j.error.message);return j.result}
+async function mcpTools(){const o=[];for(const[i,s]of S.mcp.entries()){try{const R=MR[s.url]||(MR[s.url]={});if(!R.ready){await mcpRpc(s,'initialize',{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'jyotish-atlas',version:'1'}},1);await mcpRpc(s,'notifications/initialized',{});R.ready=1}
+if(!R.tools)R.tools=(await mcpRpc(s,'tools/list',{},2)).tools||[];for(const t of R.tools)o.push({name:('m'+i+'_'+t.name).replace(/[^\w-]/g,'_').slice(0,64),description:(t.description||'').slice(0,300),schema:t.inputSchema||{type:'object',properties:{}},mcp:[i,t.name]})}catch(e){}}return o}
+async function runTool(t,args,c){try{if(t.mcp){const r=await mcpRpc(S.mcp[t.mcp[0]],'tools/call',{name:t.mcp[1],arguments:args},3+Math.floor(Math.random()*1e6));return(r.content||[]).map(x=>x.text||'').join('\n').slice(0,4000)||JSON.stringify(r).slice(0,4000)}return sections(c,args.section)}catch(e){return'Tool error: '+e.message}}
+async function llm(P,hist,sys,tools,c){const A=P.kind=='anthropic',m=hist.map(x=>({role:x.r,content:x.c}));
+for(let k=0;k<6;k++){const body=A?{model:P.model,max_tokens:900,system:[{type:'text',text:sys,cache_control:{type:'ephemeral'}}],messages:m,tools:tools.map(t=>({name:t.name,description:t.description,input_schema:t.schema}))}:{model:P.model,max_tokens:900,messages:[{role:'system',content:sys},...m],tools:tools.map(t=>({type:'function',function:{name:t.name,description:t.description,parameters:t.schema}}))};
+const hd=A?{'x-api-key':P.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'}:{Authorization:'Bearer '+P.key,'content-type':'application/json'};
+const r=await fetch(P.url,{method:'POST',headers:hd,body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw new Error(j.error?.message||j.message||r.status);
+const u=j.usage||{};S.tok[0]+=u.input_tokens||u.prompt_tokens||0;S.tok[1]+=u.output_tokens||u.completion_tokens||0;
+if(A){const tu=j.content.filter(b=>b.type=='tool_use');if(!tu.length)return j.content.filter(b=>b.type=='text').map(b=>b.text).join('');m.push({role:'assistant',content:j.content});m.push({role:'user',content:await Promise.all(tu.map(async b=>({type:'tool_result',tool_use_id:b.id,content:await runTool(tools.find(t=>t.name==b.name)||{},b.input||{},c)})))})}
+else{const g=j.choices[0].message;if(!g.tool_calls?.length)return g.content||'';m.push(g);for(const q of g.tool_calls)m.push({role:'tool',tool_call_id:q.id,content:await runTool(tools.find(t=>t.name==q.function.name)||{},JSON.parse(q.function.arguments||'{}'),c)})}}return'(tool loop limit reached)'}
+async function ask(text){const c=cur(),P=S.prov[S.act];if(!P){ui.sheet='prov';return render()}const h=S.chat[c.id]||(S.chat[c.id]=[]);h.push({r:'user',c:text});ui.busy=1;render();
+try{const sys='You are an expert Vedic (Jyotish) astrologer. Chart data below was computed on the user’s device (sidereal; settings stated). Be concise and concrete, cite chart factors, no fatalism, no medical/financial certainty. Call chart_data for anything not given.\n'+digest(c),tools=[...LT,...await mcpTools()];
+const a=await llm(P,h.slice(-8),sys,tools,c);h.push({r:'assistant',c:a})}catch(e){h.push({r:'assistant',c:'⚠ '+e.message+(/fetch|Failed/i.test(e.message)?' (browser may be blocked by CORS for this provider; check URL/key)':'')})}ui.busy=0;save();render()}
+const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^[-*] (.+)$/gm,'• $1').replace(/\n/g,'<br>');
+function tAsk(c){const h=S.chat[c.id]||[],P=S.prov[S.act];return`<div class=card><div class=row><select data-c=act>${S.prov.map((p,i)=>`<option value=${i} ${i==S.act?'selected':''}>${esc(p.name)}</option>`).join('')||'<option>No AI connected</option>'}</select><button data-a=sheet data-v=prov>${P?'⚙':'Connect AI'}</button></div>
+<div class=row>${TOPICS.map(([l,q])=>`<b class=chip data-a=topic data-q="${esc(q)}">${l}</b>`).join('')}</div><div class=m>Calculations stay on-device. Only a ~400-token chart digest + your question is sent to the AI you choose; it can request more via tools. Tokens used: ${S.tok[0]} in / ${S.tok[1]} out.</div></div>
+<div id=chat>${h.map(m=>`<div class="msg ${m.r}">${md(m.c)}</div>`).join('')}${ui.busy?'<div class="msg assistant">…</div>':''}</div><div class="card row"><textarea id=q rows=2 placeholder="Ask about this chart…">${esc(ui.draft)}</textarea><button data-a=send>Send</button></div>${h.length?'<button data-a=clr>Clear chat</button>':''}`}
+/* ---------- sheets ---------- */
+function sheetHTML(){const c=ui.edit?S.charts.find(x=>x.id==ui.edit):null,v=c||{name:'',date:iso(Date.now()),time:'12:00',place:'',lat:'',lon:'',tz:Intl.DateTimeFormat().resolvedOptions().timeZone};
+if(ui.sheet=='form')return`<h3>${c?'Edit':'New'} chart</h3><label>Name<input id=f_name value="${esc(v.name)}"></label><div class=row><label>Date<input type=date id=f_date value="${v.date}"></label><label>Time (local)<input type=time id=f_time value="${v.time}"></label></div>
+<label>Place<div class=row><input id=f_place value="${esc(v.place)}" placeholder="City, country"><button data-a=find>Find</button></div></label>${ui.places.map((p,i)=>`<div class=li data-a=pick data-i=${i}>${esc(p.name)}, ${esc(p.admin1||'')} ${esc(p.country||'')} <span class=m>${p.latitude.toFixed(2)}, ${p.longitude.toFixed(2)} · ${p.timezone}</span></div>`).join('')}
+<div class=row><label>Latitude<input id=f_lat value="${v.lat}" inputmode=decimal></label><label>Longitude (E+)<input id=f_lon value="${v.lon}" inputmode=decimal></label></div><label>Time zone (IANA or ±hh:mm)<input id=f_tz value="${esc(v.tz)}"></label><div class=m>Historical offsets/DST are resolved automatically from the IANA zone. Without internet enter lat/lon and zone manually.</div><div class=row><button class=pri data-a=saveForm>Save</button><button data-a=close>Cancel</button></div>`;
+if(ui.sheet=='lib')return`<h3>Kundli library</h3><div class=m>Saved only on this phone.</div>${S.charts.map(c=>`<div class=li><b data-a=open data-id="${c.id}">${esc(c.name||'Unnamed')}</b> <span class=m>${c.date} ${c.time} · ${esc(c.place)}</span><div class=row><button data-a=edit data-id="${c.id}">Edit</button><button data-a=dup data-id="${c.id}">Copy</button><button data-a=del data-id="${c.id}">Delete</button></div></div>`).join('')}<div class=row><button class=pri data-a=new>＋ New chart</button><button data-a=close>Close</button></div>`;
+if(ui.sheet=='cfg')return`<h3>Settings</h3><label>Ayanamsa<select data-c=ay>${Object.entries(AYN).map(([k,v])=>`<option value=${k} ${k==S.cfg.ay?'selected':''}>${v}</option>`).join('')}</select></label><div class=m>True Chitra is computed from Spica’s actual position; others use standard anchor values.</div>
+<label>House system<select data-c=hs>${Object.entries(HSN).map(([k,v])=>`<option value=${k} ${k==S.cfg.hs?'selected':''}>${v}</option>`).join('')}</select></label><label>Lunar node<select data-c=nd><option value=true ${S.cfg.nd=='true'?'selected':''}>True node</option><option value=mean ${S.cfg.nd=='mean'?'selected':''}>Mean node</option></select></label>
+<div class=row><button data-a=exp>Export all (JSON)</button><label class=btn>Import<input type=file id=imp accept=.json hidden></label></div><button data-a=close>Done</button>`;
+if(ui.sheet=='prov')return`<h3>AI & tools</h3><div class=m>Paste an API key / token for any provider — consumer logins (claude.ai, Copilot, ChatGPT) cannot be used by third-party apps without a server. Keys stay on this phone and are sent only to the provider you select.</div>${S.prov.map((p,i)=>`<div class=li><b>${esc(p.name)}</b><input data-c=pm data-i=${i} data-f=model value="${esc(p.model)}" placeholder=model><input data-c=pm data-i=${i} data-f=url value="${esc(p.url)}"><input data-c=pm data-i=${i} data-f=key value="${esc(p.key)}" type=password placeholder="API key"><button data-a=rmp data-i=${i}>Remove</button></div>`).join('')}
+<div class=row>${PRE.map((p,i)=>`<b class=chip data-a=addp data-i=${i}>+ ${p[0]}</b>`).join('')}</div><h4>MCP servers (remote, HTTP)</h4>${S.mcp.map((s,i)=>`<div class=li>${esc(s.name)} <span class=m>${esc(s.url)}</span><button data-a=rmm data-i=${i}>Remove</button></div>`).join('')}<div class=row><input id=mn placeholder=Name><input id=mu placeholder="https://…/mcp"><input id=mt placeholder="Bearer token (optional)"><button data-a=addm>Add</button></div><button data-a=close>Done</button>`;
+if(ui.sheet=='pl'){const p=natal(cur()).pl[ui.sel],c=cur(),n=natal(c);return`<h3 style="color:${PC[p.i]}">${PN[p.i]}${p.rx&&p.i<7?' ℞':''}</h3><table class=tb><tr><td>Position<td>${fP(p.lon)} (${SIGNS[p.sg]})</tr><tr><td>Nakshatra<td>${NAK[p.nk]} pada ${p.pd}, lord ${PN[[8,5,0,1,2,7,4,6,3][p.nk%9]]}</tr><tr><td>House (${HSN[S.cfg.hs]})<td>${p.house}</tr><tr><td>Sign lord<td>${PN[SL[p.sg]]} in ${SIGNS[n.pl[SL[p.sg]].sg]}</tr><tr><td>Dignity<td>${p.dig||'—'}${p.cb?', combust':''}</tr><tr><td>Speed<td>${p.sp.toFixed(3)} °/day${p.rx&&p.i<7?' (retrograde)':''}</tr><tr><td>Navamsa<td>${SIGNS[dsign(p.lon,9)]}</tr><tr><td>Aspects (drishti)<td>${drishti(n)[p.i].t.join(', ')||'—'}</tr><tr><td>Themes<td>${PKW[p.i]}</tr></table><button data-a=close>Close</button>`}return''}
+/* ---------- render ---------- */
+const TABS=[['chart','◎','Chart'],['time','⌛','Dasha'],['sky','☄','Sky'],['energy','⬡','Energy'],['map','◍','Map'],['ins','✺','Insights'],['ask','✎','Ask AI']];
+function render(){const y=scrollY,c=cur(),q=$('#q');if(q)ui.draft=q.value;let b;
+if(!c)b=`<div class=card><h2>Welcome</h2><p>Your private Vedic astrology workbench. Everything is calculated on your phone.</p><button class=pri data-a=new>Create first chart</button></div>`;
+else{try{b={chart:tChart,time:tTime,sky:tSky,energy:tEnergy,map:tMap,ins:tInsights,ask:tAsk}[tab](c)}catch(e){b=`<div class=card>⚠ ${esc(e.message)}</div>`}}
+$('#app').innerHTML=`<header><b data-a=sheet data-v=lib>☰ ${esc(c?c.name||'Chart':'Jyotish Atlas')}</b><span class=m>${c?c.date+' '+c.time:''}</span><i style="flex:1"></i><button data-a=sheet data-v=cfg>⚙</button></header><main>${b}</main><nav>${TABS.map(([k,i,l])=>`<b class="${k==tab?'on':''}" data-a=tab data-v=${k}><i>${i}</i>${l}</b>`).join('')}</nav>${ui.sheet?`<div class=ov data-a=ovl><div class=sh>${sheetHTML()}</div></div>`:''}`;
+scrollTo(0,y);if(tab=='map'&&c){drawMap(c);$('#mphit').innerHTML=hitText(c);if(!WORLD&&!ui.wf){ui.wf=1;fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json').then(r=>r.json()).then(j=>{WORLD=j;drawMap(c)}).catch(()=>{})}}
+if(tab=='ask'){const ch=$('#chat');if(ch)ch.lastElementChild?.scrollIntoView()}const im=$('#imp');if(im)im.onchange=e=>{const f=e.target.files[0];f&&f.text().then(t=>{const d=JSON.parse(t);S.charts=[...S.charts,...d.charts.filter(x=>!S.charts.some(y=>y.id==x.id))];save();render()})}}
+const rr=()=>{save();render()};
+const A={tab:d=>{tab=d.v;render()},mode:d=>{view.m=d.v;render()},st:d=>{S.cfg.st=d.v;rr()},pm:d=>{S.cfg.pm=d.v;rr()},dsys:d=>{ui.dsys=d.v;render()},op:d=>{ui.open[d.k]=!ui.open[d.k];render()},
+dd:d=>{const v=+d.v;view.d=v?iso(Date.parse(view.d+'T12:00:00Z')+v*864e5):iso(Date.now());render()},vy:()=>{view.y=+$('#vy').value;render()},sd:d=>{const v=+d.v;ui.sky=v?(ui.sky??nowJD())+v:null;render()},
+pl:d=>{ui.sel=+d.i;ui.sheet='pl';render()},sheet:d=>{ui.sheet=d.v;render()},close:()=>{ui.sheet='';ui.edit=null;ui.places=[];render()},ovl:(d,t,e)=>{if(e.target==t)A.close()},
+new:()=>{ui.edit=null;ui.sheet='form';render()},edit:d=>{ui.edit=d.id;ui.sheet='form';render()},open:d=>{S.cur=d.id;ui.sheet='';rr()},dup:d=>{const c=S.charts.find(x=>x.id==d.id);S.charts.push({...c,id:Date.now().toString(36),name:c.name+' (copy)'});rr()},del:d=>{if(confirm('Delete this chart?')){S.charts=S.charts.filter(x=>x.id!=d.id);if(S.cur==d.id)S.cur=S.charts[0]?.id;rr()}},
+find:async()=>{const q=$('#f_place').value;try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&name='+encodeURIComponent(q));ui.places=(await r.json()).results||[]}catch(e){alert('Search needs internet. Enter latitude/longitude/time zone manually.')}keepForm();render()},
+pick:d=>{const p=ui.places[+d.i];keepForm();ui.form.place=[p.name,p.admin1,p.country].filter(Boolean).join(', ');ui.form.lat=p.latitude;ui.form.lon=p.longitude;ui.form.tz=p.timezone;ui.places=[];render();applyForm()},
+saveForm:()=>{keepForm();const f=ui.form;try{const[y,m,d]=f.date.split('-').map(Number),[h,mi]=f.time.split(':').map(Number),ms=local2ms(y,m,d,h,mi,f.tz);if(isNaN(ms)||isNaN(+f.lat)||isNaN(+f.lon)||f.lat===''||f.lon==='')throw 0;
+const o={id:ui.edit||Date.now().toString(36),name:f.name||'Unnamed',date:f.date,time:f.time,tz:f.tz,place:f.place,lat:+f.lat,lon:+f.lon,jd:jdOf(ms)};const i=S.charts.findIndex(x=>x.id==o.id);if(i>=0)S.charts[i]=o;else S.charts.push(o);S.cur=o.id;ui.sheet='';ui.edit=null;ui.form=null;rr()}catch(e){alert('Check date, time, latitude, longitude and time zone.')}},
+mpp:d=>{const i=+d.i,k=ui.mp.sel.indexOf(i);k>=0?ui.mp.sel.splice(k,1):ui.mp.sel.push(i);render()},reloc:()=>{const c=cur(),h=ui.mp.ph;S.charts.push({...c,id:Date.now().toString(36),name:c.name+' @'+h[0].toFixed(1)+','+h[1].toFixed(1),place:'Relocated',lat:h[0],lon:h[1]});S.cur=S.charts[S.charts.length-1].id;tab='chart';rr()},
+topic:d=>ask(d.q),send:()=>{const t=$('#q').value.trim();if(t){ui.draft='';ask(t)}},clr:()=>{delete S.chat[cur().id];rr()},addp:d=>{const p=PRE[+d.i];S.prov.push({name:p[0],kind:p[1],url:p[2],model:p[3],key:''});S.act=S.prov.length-1;rr()},rmp:d=>{S.prov.splice(+d.i,1);S.act=0;rr()},
+addm:()=>{const u=$('#mu').value.trim();if(u){S.mcp.push({name:$('#mn').value||u,url:u,tok:$('#mt').value});rr()}},rmm:d=>{S.mcp.splice(+d.i,1);rr()},
+exp:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({charts:S.charts})],{type:'application/json'}));a.download='kundlis.json';a.click()}};
+function keepForm(){ui.form=ui.form||{};for(const k of['name','date','time','place','lat','lon','tz']){const e=$('#f_'+k);if(e)ui.form[k]=e.value}}
+function applyForm(){for(const k in ui.form){const e=$('#f_'+k);if(e)e.value=ui.form[k]}}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a])A[t.dataset.a](t.dataset,t,e);else{const cv=e.target.closest('#map');if(cv){const r=cv.getBoundingClientRect();ui.mp.ph=[90-(e.clientY-r.top)/r.height*180,(e.clientX-r.left)/r.width*360-180];drawMap(cur());$('#mphit').innerHTML=hitText(cur())}}});
+document.addEventListener('change',e=>{const t=e.target,k=t.dataset.c,c=cur();if(!k){if(t.id=='vd'){view.d=t.value;render()}if(t.id=='sdt'){ui.sky=Date.parse(t.value+'T12:00:00Z')/864e5+2440587.5;render()}return}
+if(k=='dv')S.cfg.dv=+t.value;else if(['ay','hs','nd'].includes(k)){S.cfg[k]=t.value;CK=''}else if(k=='act')S.act=+t.value;else if(k=='sight'){ui.sight=t.checked}else if(k=='pm')S.prov[+t.dataset.i][t.dataset.f]=t.value;
+else if(k=='city'){const x=CITY[+t.value];if(x){ui.mp.ph=[x[1],x[2]]}}rr()});
+if('serviceWorker'in navigator&&/^http/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(!S.cur&&S.charts[0])S.cur=S.charts[0].id;render();
+</script></body></html>
